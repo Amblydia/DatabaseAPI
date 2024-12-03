@@ -1,0 +1,18 @@
+{
+    "name": "amblydia/database-api",
+    "description": "A Database virion for PocketMine-MP",
+    "type": "library",
+    "license": "GPL-3.0",
+    "require": {
+        "pocketmine/pocketmine-mp": "^5.0.0"
+    },
+    "autoload": {
+        "classmap": ["src"]
+    },
+    "extra": {
+        "virion": {
+            "spec": "3.0",
+            "namespace-root": "amblydia\\databaseapi"
+        }
+    }
+}
