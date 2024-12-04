@@ -8,6 +8,5 @@ use Attribute;
 #[Attribute]
 class ColumnName {
 
-    public function __construct(public string $value) {
-    }
+	public function __construct(public string $value) {}
 }

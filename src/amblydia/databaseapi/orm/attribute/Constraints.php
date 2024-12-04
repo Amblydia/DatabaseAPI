@@ -8,6 +8,5 @@ use Attribute;
 #[Attribute]
 class Constraints {
 
-    public function __construct(public array $value) {
-    }
+	public function __construct(public array $value) {}
 }

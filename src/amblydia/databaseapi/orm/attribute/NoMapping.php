@@ -6,6 +6,4 @@ namespace amblydia\databaseapi\orm\attribute;
 use Attribute;
 
 #[Attribute]
-class NoMapping {
-
-}
+class NoMapping {}

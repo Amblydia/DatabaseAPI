@@ -8,6 +8,5 @@ use Attribute;
 #[Attribute]
 class DefaultValue {
 
-    public function __construct(public mixed $value) {
-    }
+	public function __construct(public mixed $value) {}
 }

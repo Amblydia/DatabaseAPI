@@ -7,22 +7,22 @@ use amblydia\databaseapi\orm\attribute\Constraints;
 
 trait Mappable {
 
-    /** @var string|null */
-    #[Constraints(["UNIQUE"])]
-    protected ?string $objectId = null;
+	/** @var string|null */
+	#[Constraints(["UNIQUE"])]
+	protected ?string $objectId = null;
 
-    /**
-     * @return string|null
-     */
-    public function getObjectId(): ?string{
-        return $this->objectId;
-    }
+	/**
+	 * @return string|null
+	 */
+	public function getObjectId(): ?string{
+		return $this->objectId;
+	}
 
-    /**
-     * @param string $objectId
-     */
-    public function setObjectId(string $objectId): void{
-        $this->objectId = $objectId;
-    }
+	/**
+	 * @param string $objectId
+	 */
+	public function setObjectId(string $objectId): void{
+		$this->objectId = $objectId;
+	}
 
 }

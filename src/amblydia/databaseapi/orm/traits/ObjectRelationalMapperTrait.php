@@ -6,29 +6,29 @@ namespace amblydia\databaseapi\orm\traits;
 use amblydia\databaseapi\orm\ObjectRelationalMapper;
 use amblydia\databaseapi\traits\ConnectionTrait;
 
-use amblydia\engine\feature\api\AmbFeature;
-
 use Exception;
+use pocketmine\plugin\PluginBase;
 
 trait ObjectRelationalMapperTrait {
-    use ConnectionTrait;
 
-    private ObjectRelationalMapper $objectRelationalMapper;
+	use ConnectionTrait;
 
-    /**
-     * @return ObjectRelationalMapper
-     */
-    public function getObjectRelationalMapper(): ObjectRelationalMapper {
-        return $this->objectRelationalMapper;
-    }
+	private ObjectRelationalMapper $objectRelationalMapper;
 
-    /**
-     * @param AmbFeature $feature
-     * @throws Exception
-     */
-    public function initObjectRelationalMapper(AmbFeature $feature): void {
-        $this->initDatabaseConnection($feature);
+	/**
+	 * @return ObjectRelationalMapper
+	 */
+	public function getObjectRelationalMapper(): ObjectRelationalMapper {
+		return $this->objectRelationalMapper;
+	}
 
-        $this->objectRelationalMapper = new ObjectRelationalMapper($this->getDatabaseConnection());
-    }
+	/**
+	 * @param PluginBase $plugin
+	 * @throws Exception
+	 */
+	public function initObjectRelationalMapper(PluginBase $plugin): void {
+		$this->initDatabaseConnection($plugin);
+
+		$this->objectRelationalMapper = new ObjectRelationalMapper($this->getDatabaseConnection());
+	}
 }
