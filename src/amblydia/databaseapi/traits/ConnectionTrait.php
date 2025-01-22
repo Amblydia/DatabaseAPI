@@ -17,10 +17,7 @@ trait ConnectionTrait {
 	 * @throws Exception
 	 */
 	public function initDatabaseConnection(PluginBase $plugin): void {
-		$plugin->saveResource("sqlite.sql");
-		$plugin->saveResource("mysql.sql");
-
-		$this->connection = new Connection($plugin->getConfig()->get("database"), $plugin);
+		$this->connection = new Connection($plugin);
 	}
 
 	/**

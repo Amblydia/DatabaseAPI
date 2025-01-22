@@ -3,64 +3,74 @@ declare(strict_types=1);
 
 namespace amblydia\databaseapi\task;
 
-use amblydia\databaseapi\helper\ConnectionHelper;
-use Exception;
+use amblydia\databaseapi\Connection;
+
+use amblydia\databaseapi\exception\DatabaseException;
+use PDOException;
 use pocketmine\scheduler\AsyncTask;
-use pocketmine\utils\Utils;
 
-class GenericQueryTask extends AsyncTask {
+use Exception;
 
-	/** @var string */
-	private string $credentials;
+final class GenericQueryTask extends AsyncTask {
 
-	/** @var string */
-	private string $queries;
+    private string $queries;
+    private string $dsn;
+    private ?string $username = null;
+    private ?string $password = null;
 
-	/**
-	 * GenericQueryTask constructor.
-	 * @param array $credentials
-	 * @param string[] $queries
-	 * @param callable|null $function
-	 */
-	public function __construct(array $credentials, array $queries, ?callable $function) {
-		Utils::validateCallableSignature($var = function ($result): void {
-		}, $function ?? $var);
+    /**
+     * @param Connection $connection
+     * @param array $queries
+     * @param callable|null $function
+     */
+    public function __construct(Connection $connection, array $queries, ?callable $function) {
+        $this->dsn = $connection->getDsn();
+        $this->password = $connection->getPassword();
+        $this->username = $connection->getUsername();
 
-		$this->credentials = serialize($credentials);
-		$this->queries = serialize($queries);
+        $this->queries = serialize($queries);
 
-		$this->storeLocal("func", $function ?? 0);
-	}
+        $this->storeLocal("func", $function ?? 0);
+    }
 
-	/**
-	 *
-	 */
-	public function onRun(): void {
-		try {
-			$connection = ConnectionHelper::connect(unserialize($this->credentials));
-			$queries = unserialize($this->queries);
+    /**
+     *
+     */
+    public function onRun(): void {
+        $queries = unserialize($this->queries);
+        $connection = null;
+        foreach ($queries as $query) {
+            try {
+                if ($connection === null)
+                    $connection = Connection::createPDOConnection($this->dsn, $this->username, $this->password);
 
-			foreach ($queries as $query) {
-				$stmt = $connection->prepare($query);
-				$stmt->execute();
-			}
+                $stmt = $connection->prepare($query);
+                $stmt->execute();
+            } catch (Exception $exception) {
+                $this->setResult("error:" . serialize($exception instanceof PDOException ? DatabaseException::create($exception, null) : $exception));
+            }
+        }
 
-			$this->setResult(true);
+        $this->setResult(true);
 
-			unset($connection); // close the connection
-		} catch (Exception $exception) {
-			$this->setResult($exception->getMessage() . "\n" .$exception->getTraceAsString());
-		}
-	}
+        unset($connection); // close the connection
+    }
 
-	/**
-	 *
-	 */
-	public function onCompletion(): void {
-		$func = $this->fetchLocal("func");
+    /**
+     *
+     */
+    public function onCompletion(): void {
+        $func = $this->fetchLocal("func");
 
-		if (is_callable($func)) {
-			$func($this->getResult());
-		}
-	}
+        $result = $this->getResult();
+        if (is_string($result)) {
+            if (str_starts_with($result, "error:")) {
+                $result = unserialize(substr($result, strlen('error:')));
+            }
+        }
+
+        if (is_callable($func)) {
+            $func($result);
+        }
+    }
 }

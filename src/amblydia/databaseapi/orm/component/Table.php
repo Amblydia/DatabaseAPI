@@ -7,9 +7,11 @@ use amblydia\databaseapi\orm\attribute\ColumnName;
 use amblydia\databaseapi\orm\attribute\Constraints;
 use amblydia\databaseapi\orm\attribute\DefaultValue;
 use amblydia\databaseapi\orm\attribute\NoMapping;
+use amblydia\databaseapi\orm\attribute\PrimaryKey;
 use amblydia\databaseapi\orm\MappingParser;
 
 use Exception;
+use InvalidArgumentException;
 use ReflectionProperty;
 
 final class Table {
@@ -20,7 +22,11 @@ final class Table {
 	/** @var array */
 	private array $mapping = [];
 
-	public function __construct(private readonly string $name) {}
+    private ?string $primaryKey = null;
+
+	public function __construct(private readonly string $name, private readonly string $version) {
+
+    }
 
 	/**
 	 * @return string
@@ -28,6 +34,20 @@ final class Table {
 	public function getName(): string {
 		return $this->name;
 	}
+
+    /**
+     * @return string|null
+     */
+    public function getPrimaryKey(): ?string {
+        return $this->primaryKey;
+    }
+
+    /**
+     * @return string
+     */
+    public function getVersion(): string {
+        return $this->version;
+    }
 
 	/**
 	 * @return array
@@ -50,16 +70,23 @@ final class Table {
 		}
 
 		$dataType = MappingParser::getDataType($property);
-		if ($dataType === null) {
-			throw new Exception("Data type cannot be null");
-		}
 
-		/** @var ColumnName $tmp */
+        /** @var ColumnName $tmp */
 		$columnName = ($tmp = MappingParser::getAttribute($property, ColumnName::class)) === null ? $property->getName() : $tmp->value;
 		/** @var DefaultValue $tmp */
 		$default = ($tmp = MappingParser::getAttribute($property, DefaultValue::class)) === null ? null : $tmp->value;
 		/** @var Constraints $tmp */
 		$constraints = ($tmp = MappingParser::getAttribute($property, Constraints::class)) === null ? [] : $tmp->value;
+
+        if(MappingParser::getAttribute($property, PrimaryKey::class) !== null){
+            if($this->primaryKey !== null){
+                throw new InvalidArgumentException("Multiple PrimaryKey properties detected: " . $this->primaryKey . " and " . $columnName);
+            }
+
+            $constraints[] = "PRIMARY KEY";
+
+            $this->primaryKey = $columnName;
+        }
 
 		$this->columns[] = new Column(
 			$columnName,

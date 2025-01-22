@@ -5,6 +5,8 @@ namespace amblydia\databaseapi\orm\component;
 
 final class Column {
 
+    public const VERSION_COLUMN = "__version";
+
 	/**
 	 * @param string $name
 	 * @param string $type

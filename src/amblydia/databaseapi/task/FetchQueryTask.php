@@ -3,28 +3,28 @@ declare(strict_types=1);
 
 namespace amblydia\databaseapi\task;
 
-use amblydia\databaseapi\helper\ConnectionHelper;
+use amblydia\databaseapi\Connection;
+
+use amblydia\databaseapi\exception\DatabaseException;
 use Exception;
 use PDO;
+use PDOException;
 use pocketmine\scheduler\AsyncTask;
-use pocketmine\utils\Utils;
 
-class FetchQueryTask extends AsyncTask {
+final class FetchQueryTask extends AsyncTask {
+    private string $dsn;
+    private ?string $username = null;
+    private ?string $password = null;
 
-	/** @var string */
-	private string $credentials;
-
-	/**
-	 * GenericQueryTask constructor.
-	 * @param array $credentials
-	 * @param string $query
-	 * @param callable|null $function
-	 */
-	public function __construct(array $credentials, private readonly string $query, ?callable $function) {
-		Utils::validateCallableSignature($var = function ($result): void {
-		}, $function ?? $var);
-
-		$this->credentials = serialize($credentials);
+    /**
+     * @param Connection $connection
+     * @param string $query
+     * @param callable|null $function
+     */
+	public function __construct(Connection $connection, private readonly string $query, ?callable $function) {
+        $this->dsn = $connection->getDsn();
+        $this->password = $connection->getPassword();
+        $this->username = $connection->getUsername();
 
 		$this->storeLocal("func", $function ?? 0);
 	}
@@ -34,7 +34,7 @@ class FetchQueryTask extends AsyncTask {
 	 */
 	public function onRun(): void {
 		try {
-			$connection = ConnectionHelper::connect(unserialize($this->credentials));
+			$connection = Connection::createPDOConnection($this->dsn, $this->username, $this->password);
 
 			$stmt = $connection->prepare($this->query);
 			$stmt->execute();
@@ -43,9 +43,9 @@ class FetchQueryTask extends AsyncTask {
 
 			$this->setResult($result);
 
-			unset($connection); // close the connection
+			unset($connection);
 		} catch (Exception $exception) {
-			$this->setResult($exception->getMessage() . "\n" .$exception->getTraceAsString());
+            $this->setResult("error:" . serialize($exception instanceof PDOException ? DatabaseException::create($exception, $this->query) : $exception));
 		}
 	}
 
@@ -55,8 +55,15 @@ class FetchQueryTask extends AsyncTask {
 	public function onCompletion(): void {
 		$func = $this->fetchLocal("func");
 
-		if (is_callable($func)) {
-			$func($this->getResult());
-		}
+        $result = $this->getResult();
+        if (is_string($result)){
+            if (str_starts_with($result, "error:")) {
+                $result = unserialize(substr($result, strlen('error:')));
+            }
+        }
+
+        if (is_callable($func)) {
+            $func($result);
+        }
 	}
 }

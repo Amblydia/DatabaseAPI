@@ -7,9 +7,5 @@ use Attribute;
 
 #[Attribute]
 class Size {
-
-	/**
-	 * @param int $value
-	 */
 	public function __construct(public int $value) {}
 }
