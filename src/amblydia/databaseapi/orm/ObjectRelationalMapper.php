@@ -12,10 +12,12 @@ use amblydia\databaseapi\orm\component\Table;
 
 use amblydia\databaseapi\orm\migration\Migrator;
 
+use amblydia\databaseapi\task\FetchLastIdTask;
 use pocketmine\scheduler\CancelTaskException;
 use pocketmine\scheduler\ClosureTask;
 
 use Exception;
+use pocketmine\Server;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionProperty;
@@ -194,6 +196,8 @@ final class ObjectRelationalMapper {
             }
 
             try {
+                $autoIncrementProperty = null;
+
                 $mapping = $table->getMapping();
                 $values = [];
 
@@ -202,8 +206,11 @@ final class ObjectRelationalMapper {
 
                 $size = count($columnNames = array_keys($mapping));
                 for ($i = 0; $i < $size; $i++) {
-                    // allow query for auto incrementing columns
-                    if ($table->getColumn($columnNames[$i])->isAutoIncrement() && empty($check)) continue;
+                    // no need to set value for auto_incrementing column when inserting
+                    if ($table->getColumn($columnNames[$i])->isAutoIncrement() && empty($check)){
+                        $autoIncrementProperty = $mapping[$columnNames[$i]]["property"];
+                        continue;
+                    }
 
                     $statement .= $columnNames[$i];
 
@@ -232,12 +239,33 @@ final class ObjectRelationalMapper {
                 }
                 $statement .= ");";
 
-                $this->connection->executeRaw($statement, function ($result) use ($onError, $onComplete): void {
-                    if (is_string($result)) {
+                $this->connection->executeRaw($statement, function ($result) use ($object, $onError, $onComplete, $autoIncrementProperty): void {
+                    if ($result instanceof Exception) {
                         if ($onError !== null) {
                             $onError($result);
                         }
 
+                        return;
+                    }
+                    if ($autoIncrementProperty !== null) {
+                        Server::getInstance()->getAsyncPool()->submitTask(new FetchLastIdTask(
+                            $this->connection,
+                            function ($lastID) use ($object, $onError, $onComplete, $autoIncrementProperty): void {
+                                if ($lastID instanceof Exception){
+                                    if ($onError !== null) {
+                                        $onError($lastID);
+
+                                        return;
+                                    }
+                                }
+
+                                /** @var ReflectionProperty $autoIncrementProperty */
+                                $autoIncrementProperty->setValue($object, $lastID);
+                                if ($onComplete !== null) {
+                                    $onComplete();
+                                }
+                            }
+                        ));
                         return;
                     }
                     if ($onComplete !== null) {

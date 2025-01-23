@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace amblydia\databaseapi\orm\component;
 
-use amblydia\databaseapi\orm\attribute\AutoIncrement;
 use amblydia\databaseapi\orm\attribute\ColumnName;
 use amblydia\databaseapi\orm\attribute\Constraints;
 use amblydia\databaseapi\orm\attribute\DefaultValue;
@@ -87,7 +86,7 @@ final class Table {
 		/** @var Constraints $tmp */
 		$constraints = ($tmp = MappingParser::getAttribute($property, Constraints::class)) === null ? [] : $tmp->value;
 
-        if(MappingParser::getAttribute($property, PrimaryKey::class) !== null){
+        if(($primaryKey = MappingParser::getAttribute($property, PrimaryKey::class)) !== null){
             if($this->primaryKey !== null){
                 throw new InvalidArgumentException("Multiple PrimaryKey properties detected: " . $this->primaryKey . " and " . $columnName);
             }
@@ -104,7 +103,7 @@ final class Table {
 			$constraints
 		);
 
-        if(MappingParser::getAttribute($property, AutoIncrement::class) !== null){
+        if($primaryKey !== null && $primaryKey->autoIncrement){
             $column->setAutoIncrement(true);
         }
 
