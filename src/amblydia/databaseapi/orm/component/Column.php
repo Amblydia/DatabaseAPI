@@ -7,6 +7,8 @@ final class Column {
 
     public const VERSION_COLUMN = "__version";
 
+    private bool $autoIncrement = false;
+
 	/**
 	 * @param string $name
 	 * @param string $type
@@ -14,6 +16,21 @@ final class Column {
 	 * @param string[] $constraints
 	 */
 	public function __construct(private readonly string $name, private readonly string $type, private readonly mixed $default, private readonly array $constraints) {}
+
+
+    /**
+     * @return bool
+     */
+    public function isAutoIncrement(): bool {
+        return $this->autoIncrement;
+    }
+
+    /**
+     * @param bool $autoIncrement
+     */
+    public function setAutoIncrement(bool $autoIncrement): void {
+        $this->autoIncrement = $autoIncrement;
+    }
 
 	/**
 	 * @return string
@@ -47,7 +64,7 @@ final class Column {
 	 * @return string
 	 */
 	public function getStructure(): string {
-		$structure =  $this->name . " " . $this->type;
+		$structure =  $this->name . " " . $this->type . ($this->autoIncrement ? " AUTO_INCREMENT" : "");
 		if ($this->default !== null){
 			$structure .= " DEFAULT " . $this->default;
 		}

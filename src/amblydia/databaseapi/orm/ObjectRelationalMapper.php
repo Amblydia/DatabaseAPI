@@ -202,6 +202,9 @@ final class ObjectRelationalMapper {
 
                 $size = count($columnNames = array_keys($mapping));
                 for ($i = 0; $i < $size; $i++) {
+                    // allow query for auto incrementing columns
+                    if ($table->getColumn($columnNames[$i])->isAutoIncrement() && empty($check)) continue;
+
                     $statement .= $columnNames[$i];
 
                     if ($i !== ($size - 1)) {

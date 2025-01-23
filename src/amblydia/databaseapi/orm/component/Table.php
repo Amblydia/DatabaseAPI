@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace amblydia\databaseapi\orm\component;
 
+use amblydia\databaseapi\orm\attribute\AutoIncrement;
 use amblydia\databaseapi\orm\attribute\ColumnName;
 use amblydia\databaseapi\orm\attribute\Constraints;
 use amblydia\databaseapi\orm\attribute\DefaultValue;
@@ -56,6 +57,14 @@ final class Table {
 		return $this->columns;
 	}
 
+    /**
+     * @param string $name
+     * @return Column|null
+     */
+    public function getColumn(string $name): ?Column {
+        return $this->columns[$name] ?? null;
+    }
+
 	/**
 	 * Adds a column to the table and updates the internal mapping
 	 *
@@ -88,12 +97,16 @@ final class Table {
             $this->primaryKey = $columnName;
         }
 
-		$this->columns[] = new Column(
+		$this->columns[$columnName] = $column = new Column(
 			$columnName,
 			$dataType,
 			$default,
 			$constraints
 		);
+
+        if(MappingParser::getAttribute($property, AutoIncrement::class) !== null){
+            $column->setAutoIncrement(true);
+        }
 
 		$this->mapping[$columnName] = [
 			"property" => $property,
@@ -120,15 +133,10 @@ final class Table {
 	 */
 	public function getCreationQuery(): string {
 		$structure = "CREATE TABLE IF NOT EXISTS `$this->name` (";
-
-		$size = count($this->columns);
-		for ($i = 0; $i < $size; $i++) {
-			$structure .= $this->columns[$i]->getStructure();
-			if ($i !== ($size - 1)) {
-				$structure .= ", ";
-			}
+		foreach ($this->columns as $column) {
+			$structure .= $column->getStructure() . ", ";
 		}
-
+        $structure = rtrim($structure, ", ");
 		$structure .= ");";
 
 		return $structure;
