@@ -5,6 +5,6 @@ namespace amblydia\databaseapi\orm\migration;
 
 abstract class Migrator {
 
-    abstract public function migrate(string $oldVersion, array &$oldRows, array &$newRows): void;
+    abstract public function getMigrationQueries(string $oldVersion): array;
 
 }

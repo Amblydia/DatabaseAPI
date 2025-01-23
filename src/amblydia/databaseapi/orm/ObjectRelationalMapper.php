@@ -77,7 +77,7 @@ final class ObjectRelationalMapper {
         $this->connection->fetchRaw("SELECT * FROM $tableName;", function ($result) use ($migrator, $object, $table, $tableName): void {
             if ($result instanceof Exception) {
                 $this->connection->executeRaw($table->getCreationQuery(), function ($result) use ($object): void {
-                    if ($result instanceof Exception){
+                    if ($result instanceof Exception) {
                         $this->connection->getPlugin()->getLogger()->logException($result);
                         return;
                     }
@@ -100,43 +100,15 @@ final class ObjectRelationalMapper {
                     throw new InvalidArgumentException("There are changes in table version, however migrator is not configured");
                 }
 
-                // todo: do the migration with transactions for failsafe
-
                 $this->connection->getPlugin()->getLogger()->info("Migrating table to new version: " . $tableName . "_v" . $table->getVersion());
                 $this->restructureTable($table, function () use ($object, $tableName, $oldVersion, $migrator, $table, &$result): void {
-                    $oldRows = $result;
-                    $newRows = [];
-
-                    foreach ($result as $oldRow) {
-                        $newRow = $this->createDummyRow($table);
-                        foreach ($oldRow as $key => $value) {
-                            if (array_key_exists($key, $newRow) && $key !== Column::VERSION_COLUMN)
-                                $newRow[$key] = $value;
-                        }
-
-                        $newRows[] = $newRow;
-                    }
-
-                    $migrator->migrate($oldVersion, $oldRows, $newRows);
-
-                    $queries = [];
-                    foreach ($newRows as $newRow){
-                        $query = "INSERT INTO $tableName (";
-                        $query .= rtrim(implode(", ", array_keys($newRow)), ", ") . ") VALUES (";
-                        $query .= rtrim(implode(", ", array_map(fn($in) => "'" . $in . "'", array_values($newRow))), ", ") . ");";
-
-                        $queries[] = $query;
-                    }
-
-                    //var_dump($queries);
-
-                    $this->connection->batchExecute($queries, function () use($object, $tableName): void{
+                    $this->connection->batchExecute($migrator->getMigrationQueries($oldVersion), function () use ($object, $tableName): void {
                         unset($this->isMapping[$object]);
 
                         $this->connection->getPlugin()->getLogger()->info("Migration complete for table: " . $tableName);
                     });
                 });
-            }else unset($this->isMapping[$object]);
+            } else unset($this->isMapping[$object]);
         });
     }
 

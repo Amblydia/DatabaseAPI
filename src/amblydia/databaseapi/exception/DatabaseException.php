@@ -10,6 +10,13 @@ class DatabaseException extends Exception {
     private array $errorInfo;
     private ?string $query;
 
+    /**
+     * @param string $message
+     * @param $code
+     * @param $errorInfo
+     * @param $query
+     * @param $previous
+     */
     public function __construct(
         string $message,
                $code,
@@ -22,14 +29,25 @@ class DatabaseException extends Exception {
         $this->query = $query;
     }
 
+    /**
+     * @return array
+     */
     public function getErrorInfo(): array {
         return $this->errorInfo;
     }
 
+    /**
+     * @return string|null
+     */
     public function getQuery(): ?string {
         return $this->query;
     }
 
+    /**
+     * @param PDOException $exception
+     * @param string|null $query
+     * @return self
+     */
     public static function create(PDOException $exception, ?string $query = null): self {
         return new self(
             $exception->getMessage(),
