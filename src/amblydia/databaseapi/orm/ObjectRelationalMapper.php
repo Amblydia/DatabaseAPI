@@ -207,7 +207,7 @@ final class ObjectRelationalMapper {
                 $size = count($columnNames = array_keys($mapping));
                 for ($i = 0; $i < $size; $i++) {
                     // no need to set value for auto_incrementing column when inserting
-                    if ($table->getColumn($columnNames[$i])->isAutoIncrement() && empty($check)){
+                    if ($table->getColumn($columnNames[$i])->isAutoIncrement() && empty($check)) {
                         $autoIncrementProperty = $mapping[$columnNames[$i]]["property"];
                         continue;
                     }
@@ -251,7 +251,7 @@ final class ObjectRelationalMapper {
                         Server::getInstance()->getAsyncPool()->submitTask(new FetchLastIdTask(
                             $this->connection,
                             function ($lastID) use ($object, $onError, $onComplete, $autoIncrementProperty): void {
-                                if ($lastID instanceof Exception){
+                                if ($lastID instanceof Exception) {
                                     if ($onError !== null) {
                                         $onError($lastID);
 

@@ -66,12 +66,8 @@ final class Connection {
             if (str_contains($queryId, "__init")) {
                 $this->executeRaw($this->queries[$queryId]["query"], function ($result) use ($plugin): void {
                     if ($result instanceof Exception) {
-
-                        $plugin->getLogger()->error($result->getMessage());
-                        return;
+                        $plugin->getLogger()->logException($result);
                     }
-
-                    $plugin->getLogger()->logException($result);
                 });
             }
         }
