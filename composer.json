@@ -1,6 +1,6 @@
 {
     "name": "amblydia/database-api",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "description": "A Database virion for PocketMine-MP",
     "type": "library",
     "license": "GPL-3.0",
