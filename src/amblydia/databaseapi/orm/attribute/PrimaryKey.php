@@ -7,5 +7,5 @@ use Attribute;
 
 #[Attribute]
 class PrimaryKey {
-    public function __construct(public bool $autoIncrement) {}
+    public function __construct() {}
 }

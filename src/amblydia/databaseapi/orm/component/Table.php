@@ -96,16 +96,12 @@ final class Table {
             $this->primaryKey = $columnName;
         }
 
-		$this->columns[$columnName] = $column = new Column(
+		$this->columns[$columnName] = new Column(
 			$columnName,
 			$dataType,
 			$default,
 			$constraints
 		);
-
-        if($primaryKey !== null && $primaryKey->autoIncrement){
-            $column->setAutoIncrement(true);
-        }
 
 		$this->mapping[$columnName] = [
 			"property" => $property,

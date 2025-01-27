@@ -248,12 +248,17 @@ final class Connection {
     /**
      * @param array $queries
      * @param callable|null $onComplete
+     * @param callable|null $onError
      */
-    public function batchExecute(array $queries, ?callable $onComplete = null): void {
+    public function batchExecute(array $queries, ?callable $onComplete = null, ?callable $onError = null): void {
         $this->getPlugin()->getServer()->getAsyncPool()->submitTask(
-            new GenericQueryTask($this, $queries, function ($result) use ($onComplete): void {
+            new GenericQueryTask($this, $queries, function ($result) use ($onError, $onComplete): void {
                 if ($result instanceof Exception) {
                     $this->getPlugin()->getLogger()->logException($result);
+
+                    if (is_callable($onError)) {
+                        $onError($result);
+                    }
                     return;
                 }
                 if ($onComplete !== null) {

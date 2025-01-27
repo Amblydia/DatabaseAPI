@@ -12,12 +12,10 @@ use amblydia\databaseapi\orm\component\Table;
 
 use amblydia\databaseapi\orm\migration\Migrator;
 
-use amblydia\databaseapi\task\FetchLastIdTask;
 use pocketmine\scheduler\CancelTaskException;
 use pocketmine\scheduler\ClosureTask;
 
 use Exception;
-use pocketmine\Server;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionProperty;
@@ -76,7 +74,7 @@ final class ObjectRelationalMapper {
 
         $this->isMapping[$object] = true;
 
-        $this->connection->fetchRaw("SELECT * FROM $tableName;", function ($result) use ($migrator, $object, $table, $tableName): void {
+        $this->connection->fetchRaw("SELECT 1 FROM $tableName;", function ($result) use ($migrator, $object, $table, $tableName): void {
             if ($result instanceof Exception) {
                 $this->connection->executeRaw($table->getCreationQuery(), function ($result) use ($object): void {
                     if ($result instanceof Exception) {
@@ -104,10 +102,14 @@ final class ObjectRelationalMapper {
 
                 $this->connection->getPlugin()->getLogger()->info("Migrating table to new version: " . $tableName . "_v" . $table->getVersion());
                 $this->restructureTable($table, function () use ($object, $tableName, $oldVersion, $migrator, $table, &$result): void {
-                    $this->connection->batchExecute($migrator->getMigrationQueries($oldVersion), function () use ($object, $tableName): void {
+                   $this->connection->batchExecute(array_merge(
+                       ["BEGIN TRANSACTION;"], $migrator->getMigrationQueries($oldVersion), ["COMMIT;"]
+                   ), function () use ($object, $tableName): void {
                         unset($this->isMapping[$object]);
 
                         $this->connection->getPlugin()->getLogger()->info("Migration complete for table: " . $tableName);
+                    }, function (Exception $exception) use ($tableName): void {
+                        $this->connection->getPlugin()->getLogger()->info("Failed migrating " . $tableName);
                     });
                 });
             } else unset($this->isMapping[$object]);
@@ -186,7 +188,7 @@ final class ObjectRelationalMapper {
         $table = $this->tables[$object::class];
         $primaryKey = $table->getPrimaryKey();
 
-        $this->connection->fetchRaw("SELECT * FROM {$table->getName()} WHERE $primaryKey='" . $getValue($primaryKey, $object) . "';", function ($check) use ($onComplete, $onError, $table, $object): void {
+        $this->connection->fetchRaw("SELECT 1 FROM {$table->getName()} WHERE $primaryKey='" . $getValue($primaryKey, $object) . "';", function ($check) use ($onComplete, $onError, $table, $object): void {
             if ($check instanceof Exception) {
                 if ($onError !== null) {
                     $onError($check);
@@ -196,8 +198,6 @@ final class ObjectRelationalMapper {
             }
 
             try {
-                $autoIncrementProperty = null;
-
                 $mapping = $table->getMapping();
                 $values = [];
 
@@ -206,12 +206,6 @@ final class ObjectRelationalMapper {
 
                 $size = count($columnNames = array_keys($mapping));
                 for ($i = 0; $i < $size; $i++) {
-                    // no need to set value for auto_incrementing column when inserting
-                    if ($table->getColumn($columnNames[$i])->isAutoIncrement() && empty($check)) {
-                        $autoIncrementProperty = $mapping[$columnNames[$i]]["property"];
-                        continue;
-                    }
-
                     $statement .= $columnNames[$i];
 
                     if ($i !== ($size - 1)) {
@@ -239,33 +233,11 @@ final class ObjectRelationalMapper {
                 }
                 $statement .= ");";
 
-                $this->connection->executeRaw($statement, function ($result) use ($object, $onError, $onComplete, $autoIncrementProperty): void {
+                $this->connection->executeRaw($statement, function ($result) use ($object, $onError, $onComplete): void {
                     if ($result instanceof Exception) {
                         if ($onError !== null) {
                             $onError($result);
                         }
-
-                        return;
-                    }
-                    if ($autoIncrementProperty !== null) {
-                        Server::getInstance()->getAsyncPool()->submitTask(new FetchLastIdTask(
-                            $this->connection,
-                            function ($lastID) use ($object, $onError, $onComplete, $autoIncrementProperty): void {
-                                if ($lastID instanceof Exception) {
-                                    if ($onError !== null) {
-                                        $onError($lastID);
-
-                                        return;
-                                    }
-                                }
-
-                                /** @var ReflectionProperty $autoIncrementProperty */
-                                $autoIncrementProperty->setValue($object, $lastID);
-                                if ($onComplete !== null) {
-                                    $onComplete();
-                                }
-                            }
-                        ));
                         return;
                     }
                     if ($onComplete !== null) {
@@ -274,7 +246,7 @@ final class ObjectRelationalMapper {
                 });
             } catch (Exception $exception) {
                 if ($onError !== null) {
-                    $onError($exception->getMessage() . "\n" . $exception->getTraceAsString());
+                    $onError($exception);
                 }
             }
         });
